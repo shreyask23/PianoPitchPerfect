@@ -13,31 +13,34 @@ public class Audience {
 	static int[] quietCData;
 	static int[] constantCData;
 	static int[] constantCNoisyData;
-	static final int sampleSize = 32768;
+	static final int sampleSize = 8192;
 	static final int sampleRate = 44100;
 	static final double targetFreq = 261.6;
-	static final int noiseSampleCount = 3;
+	static final int noiseSampleCount = 1;
 	
 	public static void main(String[] args) {
 		//Currently testing FFT efficiency and accuracy
 		loadData();
+		Window window = new Window();
 		int[] CChunk = new int[sampleSize];
-		System.arraycopy(constantCNoisyData, 0, CChunk, 0, sampleSize);
+		System.arraycopy(constantCData, 0, CChunk, 0, sampleSize);
+		double[] windowedCCHunk = window.hanningWindow(CChunk);
 		long startTime = System.nanoTime();
-		FFT tester = new FFT(CChunk);
+		FFT tester = new FFT(windowedCCHunk);
 		ComplexNumber[] fftout = tester.fft(tester.getTData());
 		long endTime = System.nanoTime();
 		double[] magnitudes = tester.freqToMagnitude(fftout);
 		ArrayList<Integer> peaks = tester.findLocalPeaks(magnitudes);
 		double CAmplitude = tester.checkFrequencyPeak(magnitudes, peaks, targetFreq, sampleRate);
 		int maxIndex = tester.maxPeakQuick(magnitudes, peaks);
-		fftLog("Singal FFT", startTime, endTime, CAmplitude, magnitudes, maxIndex, tester);
+		fftLog("Signal FFT", startTime, endTime, CAmplitude, magnitudes, maxIndex, tester);
 		int[] noise = new int[noiseSampleCount * sampleSize];
-		System.arraycopy(noisyCData, 0, noise, 0, noiseSampleCount * sampleSize);
+		System.arraycopy(quietCData, 0, noise, 0, noiseSampleCount * sampleSize);
 		double[] noiseDouble = new double[noiseSampleCount * sampleSize];
 		for (int k = 0; k < noiseDouble.length; k++) {
 			noiseDouble[k] = noise[k];
 		}
+		noiseDouble = window.hanningWindow(noiseDouble);
 		startTime = System.nanoTime();
 		tester.loadBackgroundNoise(noiseDouble);
 		endTime = System.nanoTime();
