@@ -1,56 +1,8 @@
 import java.math.*;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.InputMismatchException;
 
 public class FFT {
-	
-	ComplexNumber[] tdata;
-	ComplexNumber[] backgroundNoise; //Initialized as null
-	double[] noiseMagnitudes; //Initialized as null; contains average noise frequency magnitudes after loadBackgroundNoise evaluates
-	
-	public FFT(double[] tdata) {
-		this.tdata = new ComplexNumber[tdata.length];
-		for (int k = 0; k < tdata.length; k++) {
-			this.tdata[k] = new ComplexNumber(tdata[k], 0);
-		}
-		backgroundNoise = null;
-		noiseMagnitudes = null;
-	}
-	
-	public FFT(int[] tdata) {
-		this.tdata = new ComplexNumber[tdata.length];
-		for (int k = 0; k < tdata.length; k++) {
-			this.tdata[k] = new ComplexNumber((double) tdata[k], 0);
-		}
-		backgroundNoise = null;
-		noiseMagnitudes = null;
-	}
-	
-	public void loadBackgroundNoise(double[] pureNoise) {
-		//Stores pureNoise as backgroundNoise and stores average frequency magnitudes of noise sample in noiseMagnitudes
-		if (pureNoise.length % tdata.length != 0) {
-			throw new InputMismatchException("Noise sample length must be multiple of signal length. Noise length was " + pureNoise.length + ". Signal length was " + tdata.length);
-		}
-		backgroundNoise = new ComplexNumber[pureNoise.length];
-		for (int k = 0; k < backgroundNoise.length; k++) {
-			backgroundNoise[k] = new ComplexNumber(pureNoise[k], 0);
-		}
-		double[][] fftMagnitudes = new double[pureNoise.length/tdata.length][tdata.length];
-		ComplexNumber[] singleNoiseSample = new ComplexNumber[tdata.length];
-		for (int k = 0; k < fftMagnitudes.length; k++) {
-			System.arraycopy(backgroundNoise, k * tdata.length, singleNoiseSample, 0, tdata.length);
-			fftMagnitudes[k] = freqToMagnitude(fft(singleNoiseSample));
-		}
-		noiseMagnitudes = new double[tdata.length];
-		for (int k = 0; k < noiseMagnitudes.length; k++) {
-			double indexSum = 0;
-			for (int j = 0; j < fftMagnitudes.length; j++) {
-				indexSum += fftMagnitudes[j][k];
-			}
-			noiseMagnitudes[k] = indexSum / fftMagnitudes.length;
-		}
-	}
 	
 	public ComplexNumber[] fft(ComplexNumber[] arr) {
 		return fftSynthesis(bitRevSort(arr));
@@ -98,7 +50,7 @@ public class FFT {
 			}
 		}
 		else {
-			throw new InputMismatchException("Parity must only be \"even\" or \"odd\". The parity given was " + parity);
+			throw new IllegalArgumentException("Parity must only be \"even\" or \"odd\". The parity given was " + parity);
 		}
 		return dilutedArr;
 	}
@@ -106,7 +58,7 @@ public class FFT {
 	private ComplexNumber[] bitRevSort(ComplexNumber[] unsortedArr) {
 		if (!(unsortedArr.length > 0 && (unsortedArr.length & (unsortedArr.length - 1)) == 0)) {
 			//Checks if unsortedArr has length that is power of 2
-			throw new InputMismatchException("FFT input length must be power of two. The input length was " + unsortedArr.length);
+			throw new IllegalArgumentException("FFT input length must be power of two. The input length was " + unsortedArr.length);
 		}
 		ComplexNumber[] sortedArr = new ComplexNumber[unsortedArr.length];
 		for (int k = 0; k < unsortedArr.length; k++) {
@@ -188,7 +140,7 @@ public class FFT {
 	
 	public int approxFreqBin(double[] magnitudes, double samplingRate, double targetFreq) {
 		if (targetFreq > samplingRate / 2) {
-			throw new InputMismatchException("Provided frequency was " + Double.toString(targetFreq) + ". Nyquist limit was " + Double.toString(samplingRate / 2));
+			throw new IllegalArgumentException("Provided frequency was " + Double.toString(targetFreq) + ". Nyquist limit was " + Double.toString(samplingRate / 2));
 		}
 		double binResolution = samplingRate / magnitudes.length;
 		return new Double(targetFreq / binResolution).intValue(); //Bin that equals targetFreq or is just under it
@@ -198,17 +150,6 @@ public class FFT {
 		//Returns max of quadratic interpolation given three sample values
 		if (left == peak && peak == right) return left; //Checks linearity of samples, which is only possible if all 3 samples are equal (given how peaks were selected)
 		return peak - (((right - left) * (right - left)) / (4 * (right - 2 * peak + left)));
-	}
-	
-	public double[] spectralSubtraction(double[] signal, double[] noise) {
-		if (signal.length != noise.length) {
-			throw new InputMismatchException("Signal length and noise length must match. Signal length was " + signal.length + ". Noise length was " + noise.length);
-		}
-		double[] differences = new double[signal.length];
-		for (int k = 0; k < signal.length; k++) {
-			differences[k] = signal[k] - noise[k];
-		}
-		return differences;
 	}
 	
 	public int maxPeak(double[] magnitudes) {
@@ -233,13 +174,5 @@ public class FFT {
 			}
 		}
 		return maxIndex;
-	}
-	
-	public double[] getNoiseMagnitudes() {
-		return noiseMagnitudes;
-	}
-	
-	public ComplexNumber[] getTData() {
-		return tdata;
 	}
 }
